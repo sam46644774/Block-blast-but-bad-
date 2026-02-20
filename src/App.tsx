@@ -163,6 +163,14 @@ export default function App() {
       gameOver: isGameOver,
       combo: clearedCount > 0 ? prev.combo + 1 : 0,
     }));
+
+    // Visual feedback for placement
+    if (gridRef.current) {
+      gridRef.current.classList.add('ring-4', 'ring-zinc-400/20');
+      setTimeout(() => {
+        gridRef.current?.classList.remove('ring-4', 'ring-zinc-400/20');
+      }, 200);
+    }
   };
 
   const resetGame = () => {
@@ -182,26 +190,46 @@ export default function App() {
 
     if (!gridRef.current) return;
 
+    const piece = gameState.currentPieces[index];
+    if (!piece) return;
+
     const gridRect = gridRef.current.getBoundingClientRect();
     const cellSize = gridRect.width / GRID_SIZE;
 
-    // Calculate which cell the piece is over
-    // We adjust by half a cell to center the drop
-    const x = Math.round((info.point.x - gridRect.left - cellSize / 2) / cellSize);
-    const y = Math.round((info.point.y - gridRect.top - cellSize / 2) / cellSize);
+    // Calculate the top-left corner of the piece relative to the grid
+    // We account for the -70px Y offset used during drag
+    const dragOffsetY = -70;
+    const adjustedY = info.point.y - dragOffsetY;
+    
+    // Calculate grid coordinates based on the center of the piece relative to the pointer
+    // This makes the "snapping" feel much more natural
+    const pieceWidth = piece.shape[0].length * cellSize;
+    const pieceHeight = piece.shape.length * cellSize;
+    
+    const x = Math.round((info.point.x - gridRect.left - pieceWidth / 2) / cellSize);
+    const y = Math.round((adjustedY - gridRect.top - pieceHeight / 2) / cellSize);
 
     placePiece(index, x, y);
   };
 
   const handleDrag = (event: any, info: any) => {
-    if (!gridRef.current) return;
+    if (!gridRef.current || draggedPieceIndex === null) return;
+    const piece = gameState.currentPieces[draggedPieceIndex];
+    if (!piece) return;
+
     const gridRect = gridRef.current.getBoundingClientRect();
     const cellSize = gridRect.width / GRID_SIZE;
     
-    const x = Math.round((info.point.x - gridRect.left - cellSize / 2) / cellSize);
-    const y = Math.round((info.point.y - gridRect.top - cellSize / 2) / cellSize);
+    const dragOffsetY = -70;
+    const adjustedY = info.point.y - dragOffsetY;
 
-    if (x >= 0 && x < GRID_SIZE && y >= 0 && y < GRID_SIZE) {
+    const pieceWidth = piece.shape[0].length * cellSize;
+    const pieceHeight = piece.shape.length * cellSize;
+
+    const x = Math.round((info.point.x - gridRect.left - pieceWidth / 2) / cellSize);
+    const y = Math.round((adjustedY - gridRect.top - pieceHeight / 2) / cellSize);
+
+    if (x >= -2 && x < GRID_SIZE && y >= -2 && y < GRID_SIZE) {
       setHoverPos({ x, y });
     } else {
       setHoverPos(null);
@@ -263,23 +291,33 @@ export default function App() {
       >
         {gameState.grid.map((row, y) => 
           row.map((cell, x) => {
-            const isHovered = draggedPieceIndex !== null && hoverPos && 
-              gameState.currentPieces[draggedPieceIndex]?.shape.some((r, ry) => 
+            const piece = draggedPieceIndex !== null ? gameState.currentPieces[draggedPieceIndex] : null;
+            const isHovered = piece && hoverPos && 
+              piece.shape.some((r, ry) => 
                 r.some((val, rx) => val === 1 && hoverPos.x + rx === x && hoverPos.y + ry === y)
               );
             
-            const canPlace = draggedPieceIndex !== null && hoverPos && 
-              canPlacePiece(gameState.grid, gameState.currentPieces[draggedPieceIndex]!, hoverPos.x, hoverPos.y);
+            const canPlace = piece && hoverPos && 
+              canPlacePiece(gameState.grid, piece, hoverPos.x, hoverPos.y);
 
             return (
               <div 
                 key={`${x}-${y}`}
                 className={cn(
-                  "grid-cell bg-zinc-100/50",
-                  cell && cell,
-                  isHovered && !cell && (canPlace ? "bg-zinc-400/30" : "bg-red-200/50")
+                  "grid-cell relative overflow-hidden",
+                  cell ? cell : "bg-zinc-100/50",
+                  isHovered && !cell && (canPlace ? "bg-zinc-400/40 shadow-inner" : "bg-red-200/60")
                 )}
-              />
+              >
+                {/* Ghost piece indicator */}
+                {isHovered && !cell && canPlace && (
+                  <motion.div 
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    className={cn("absolute inset-0 opacity-40", piece?.color)}
+                  />
+                )}
+              </div>
             );
           })
         )}
@@ -321,12 +359,16 @@ export default function App() {
                 onDragStart={() => setDraggedPieceIndex(index)}
                 onDragEnd={(e, info) => handleDragEnd(e, info, index)}
                 onDrag={handleDrag}
+                initial={{ scale: 0.8, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                whileHover={{ scale: 1.05 }}
                 whileDrag={{ 
-                  scale: 1.2, 
+                  scale: 1.3, 
                   zIndex: 50,
-                  y: -60 // Offset piece above finger for better visibility on mobile
+                  y: -70, // Slightly higher for better visibility
+                  filter: "drop-shadow(0 20px 13px rgb(0 0 0 / 0.03)) drop-shadow(0 8px 5px rgb(0 0 0 / 0.08))"
                 }}
-                className="cursor-grab active:cursor-grabbing touch-none"
+                className="cursor-grab active:cursor-grabbing touch-none p-4"
               >
                 <div 
                   className="grid gap-0.5"

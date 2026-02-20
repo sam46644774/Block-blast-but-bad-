@@ -51,6 +51,16 @@ export const PIECE_TEMPLATES: Omit<Piece, 'id' | 'color'>[] = [
 
 export const CHANGELOG: { version: string; date: string; changes: string[] }[] = [
   {
+    version: '1.2.0',
+    date: 'February 20, 2026',
+    changes: [
+      'Significantly improved drag-and-drop precision',
+      'Added real-time "ghost" piece preview on the grid',
+      'Refined placement logic for more intuitive snapping',
+      'Smoother transitions between dragging and placing states',
+    ],
+  },
+  {
     version: '1.1.0',
     date: 'February 20, 2026',
     changes: [
