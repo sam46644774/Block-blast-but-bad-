@@ -51,6 +51,27 @@ export const PIECE_TEMPLATES: Omit<Piece, 'id' | 'color'>[] = [
 
 export const CHANGELOG: { version: string; date: string; changes: string[] }[] = [
   {
+    version: '1.4.0',
+    date: 'February 20, 2026',
+    changes: [
+      'Matched dragging and placing mechanics to the original Block Blast',
+      'Pieces now scale perfectly to grid size when picked up',
+      'Added "Impossible Move" dimming for pieces that can\'t be placed',
+      'Enhanced ghost piece visibility and placement snapping',
+      'Smoother animations for piece pickup and drop',
+    ],
+  },
+  {
+    version: '1.3.0',
+    date: 'February 20, 2026',
+    changes: [
+      'Complete rework of the dragging and placing system',
+      'Pieces now scale to grid size immediately upon drag',
+      'Improved snapping logic using the piece top-left reference',
+      'Smoother ghost piece transitions and visual feedback',
+    ],
+  },
+  {
     version: '1.2.1',
     date: 'February 20, 2026',
     changes: [

@@ -196,13 +196,11 @@ export default function App() {
     const gridRect = gridRef.current.getBoundingClientRect();
     const cellSize = gridRect.width / GRID_SIZE;
 
-    // Calculate the top-left corner of the piece relative to the grid
-    // We account for the -70px Y offset used during drag
-    const dragOffsetY = -70;
+    // In the real game, the piece is offset so it's above the finger.
+    // We use a consistent offset that matches the visual scale.
+    const dragOffsetY = -100; 
     const adjustedY = info.point.y - dragOffsetY;
     
-    // Calculate grid coordinates based on the center of the piece relative to the pointer
-    // This makes the "snapping" feel much more natural
     const pieceWidth = piece.shape[0].length * cellSize;
     const pieceHeight = piece.shape.length * cellSize;
     
@@ -220,7 +218,7 @@ export default function App() {
     const gridRect = gridRef.current.getBoundingClientRect();
     const cellSize = gridRect.width / GRID_SIZE;
     
-    const dragOffsetY = -70;
+    const dragOffsetY = -100;
     const adjustedY = info.point.y - dragOffsetY;
 
     const pieceWidth = piece.shape[0].length * cellSize;
@@ -229,7 +227,7 @@ export default function App() {
     const x = Math.round((info.point.x - gridRect.left - pieceWidth / 2) / cellSize);
     const y = Math.round((adjustedY - gridRect.top - pieceHeight / 2) / cellSize);
 
-    if (x >= -2 && x < GRID_SIZE && y >= -2 && y < GRID_SIZE) {
+    if (x >= -3 && x <= GRID_SIZE && y >= -3 && y <= GRID_SIZE) {
       setHoverPos({ x, y });
     } else {
       setHoverPos(null);
@@ -326,8 +324,11 @@ export default function App() {
                   <motion.div 
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
-                    className={cn("absolute inset-0 opacity-40", piece?.color)}
+                    className={cn("absolute inset-0 opacity-60", piece?.color)}
                   />
+                )}
+                {isHovered && !cell && !canPlace && (
+                  <div className="absolute inset-0 bg-red-500/20" />
                 )}
               </div>
             );
@@ -362,50 +363,72 @@ export default function App() {
 
       {/* Piece Tray */}
       <div className="mt-8 w-full max-w-md flex justify-around items-center h-24 sm:h-32">
-        {gameState.currentPieces.map((piece, index) => (
-          <div key={index} className="w-1/3 flex justify-center items-center h-full">
-            {piece ? (
-              <motion.div
-                drag
-                dragSnapToOrigin
-                onDragStart={() => setDraggedPieceIndex(index)}
-                onDragEnd={(e, info) => handleDragEnd(e, info, index)}
-                onDrag={handleDrag}
-                initial={{ scale: 0.8, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                whileHover={{ scale: 1.05 }}
-                whileDrag={{ 
-                  scale: 1.3, 
-                  zIndex: 50,
-                  y: -70, // Slightly higher for better visibility
-                  filter: "drop-shadow(0 20px 13px rgb(0 0 0 / 0.03)) drop-shadow(0 8px 5px rgb(0 0 0 / 0.08))"
-                }}
-                className="cursor-grab active:cursor-grabbing touch-none p-4"
-              >
-                <div 
-                  className="grid gap-0.5"
-                  style={{ 
-                    gridTemplateColumns: `repeat(${piece.shape[0].length}, minmax(0, 1fr))`,
+        {gameState.currentPieces.map((piece, index) => {
+          const canBePlacedSomewhere = piece ? (
+            // Check if this piece can be placed anywhere on the current grid
+            (() => {
+              for (let y = 0; y < GRID_SIZE; y++) {
+                for (let x = 0; x < GRID_SIZE; x++) {
+                  if (canPlacePiece(gameState.grid, piece, x, y)) return true;
+                }
+              }
+              return false;
+            })()
+          ) : false;
+
+          return (
+            <div key={index} className="w-1/3 flex justify-center items-center h-full">
+              {piece ? (
+                <motion.div
+                  drag
+                  dragSnapToOrigin
+                  onDragStart={() => setDraggedPieceIndex(index)}
+                  onDragEnd={(e, info) => handleDragEnd(e, info, index)}
+                  onDrag={handleDrag}
+                  initial={{ scale: 0.8, opacity: 0 }}
+                  animate={{ 
+                    scale: 1, 
+                    opacity: canBePlacedSomewhere || draggedPieceIndex === index ? 1 : 0.4 
                   }}
-                >
-                  {piece.shape.map((row, y) => 
-                    row.map((val, x) => (
-                      <div 
-                        key={`${x}-${y}`}
-                        className={cn(
-                          "w-4 h-4 sm:w-6 sm:h-6 rounded-sm",
-                          val === 1 ? piece.color : "bg-transparent"
-                        )}
-                      />
-                    ))
+                  whileHover={{ scale: canBePlacedSomewhere ? 1.05 : 1 }}
+                  whileDrag={{ 
+                    scale: 2.4, // Calculated to match grid size (48px / 20px)
+                    zIndex: 50,
+                    y: -100, // Higher offset to clear finger
+                    filter: "drop-shadow(0 25px 25px rgb(0 0 0 / 0.2))",
+                    opacity: 1
+                  }}
+                  transition={{ type: "spring", stiffness: 400, damping: 30 }}
+                  className={cn(
+                    "cursor-grab active:cursor-grabbing touch-none p-4",
+                    !canBePlacedSomewhere && draggedPieceIndex !== index && "grayscale-[0.5]"
                   )}
-                </div>
-              </motion.div>
-            ) : (
-              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-zinc-100 border-2 border-dashed border-zinc-200" />
-            )}
-          </div>
-        ))}
+                >
+                  <div 
+                    className="grid gap-0.5"
+                    style={{ 
+                      gridTemplateColumns: `repeat(${piece.shape[0].length}, minmax(0, 1fr))`,
+                    }}
+                  >
+                    {piece.shape.map((row, y) => 
+                      row.map((val, x) => (
+                        <div 
+                          key={`${x}-${y}`}
+                          className={cn(
+                            "w-4 h-4 sm:w-5 sm:h-5 rounded-sm shadow-sm",
+                            val === 1 ? piece.color : "bg-transparent"
+                          )}
+                        />
+                      ))
+                    )}
+                  </div>
+                </motion.div>
+              ) : (
+                <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-zinc-100 border-2 border-dashed border-zinc-200" />
+              )}
+            </div>
+          );
+        })}
       </div>
 
       {/* Changelog Modal */}
