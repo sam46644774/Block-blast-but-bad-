@@ -264,7 +264,19 @@ export default function App() {
       </div>
 
       {/* Score Display */}
-      <div className="mb-8 text-center">
+      <div className="mb-8 text-center relative">
+        <AnimatePresence>
+          {gameState.score > gameState.highScore && gameState.highScore > 0 && (
+            <motion.div
+              initial={{ opacity: 0, y: 10, scale: 0.8 }}
+              animate={{ opacity: 1, y: -20, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.8 }}
+              className="absolute -top-6 left-1/2 -translate-x-1/2 bg-yellow-400 text-yellow-900 text-[10px] font-black px-2 py-0.5 rounded-full uppercase tracking-widest shadow-sm z-10"
+            >
+              New Record
+            </motion.div>
+          )}
+        </AnimatePresence>
         <motion.div 
           key={gameState.score}
           initial={{ scale: 1.2, opacity: 0 }}

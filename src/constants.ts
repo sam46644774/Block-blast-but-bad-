@@ -51,6 +51,14 @@ export const PIECE_TEMPLATES: Omit<Piece, 'id' | 'color'>[] = [
 
 export const CHANGELOG: { version: string; date: string; changes: string[] }[] = [
   {
+    version: '1.2.1',
+    date: 'February 20, 2026',
+    changes: [
+      'Verified and reinforced high score persistence using localStorage',
+      'Added "New Record" indicator when beating your high score',
+    ],
+  },
+  {
     version: '1.2.0',
     date: 'February 20, 2026',
     changes: [
